@@ -48,7 +48,8 @@
   /* 고양이·모자는 JS 가 매 프레임 transform 으로 움직임. 기준점 = 발밑(아래 가운데) */
   .cat, .hat { position: absolute; left: 0; top: 0; transform-origin: 50% 100%; will-change: transform; opacity: 0; }
 
-  #curtain { position: fixed; inset: 0; background: #000; z-index: 10; }
+  /* 검은 막은 보이기만 하는 층 — 클릭은 통과. (예전엔 투명해진 뒤에도 화면 전체 클릭을 가로채서 케이크 촛불이 안 눌렸음) */
+  #curtain { position: fixed; inset: 0; background: #000; z-index: 10; pointer-events: none; }
   #bloom {
     position: fixed; left: 50%; top: 50%;
     width: 40vmax; height: 40vmax; margin: -20vmax 0 0 -20vmax;
@@ -85,8 +86,8 @@
 
   /* 수정 요청용 슬라이드바: 주소에 ?edit 가 있을 때만 보임 (여친용 링크엔 안 붙이면 끝) */
   #dev {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: none;
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); box-sizing: border-box;
+    position: fixed; left: 0; right: 0; top: 0; z-index: 20; display: none;   /* 위쪽: 아래에 두면 피날레 케이크를 덮음 */
+    padding: calc(8px + env(safe-area-inset-top)) 10px 8px; box-sizing: border-box;
     background: rgba(20, 20, 28, .82); color: #fff; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
     font: 600 12.5px/1.3 -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   }
