@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="robots" content="noindex, nofollow">
+<!-- 카톡 링크 미리보기(낚시): 당첨 안내처럼 보이게. 배포 주소 = greenteavillain.github.io/event-winner-notice (GitHub Pages. Netlify는 무료 사이트 맨 아래에 'Build your own site' 배지를 최상위층으로 강제 삽입해서 케이크를 덮었음 → 이전). og:image 는 절대주소여야 카톡이 읽음 -->
+<title>이벤트 당첨 안내</title>
+<meta name="description" content="스타벅스 1만원 상품권 수령 안내">
+<meta property="og:type" content="website">
+<meta property="og:title" content="[당첨 안내] 9월 ‘홍익인의 통학 루틴 밸런스 게임’ 이벤트">
+<meta property="og:description" content="스타벅스 1만원 상품권 수령 안내 🎁">
+<meta property="og:url" content="https://greenteavillain.github.io/event-winner-notice/">
+<meta property="og:image" content="https://greenteavillain.github.io/event-winner-notice/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<style>
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #fff;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  img { -webkit-user-drag: none; pointer-events: none; }
+
+  /* 층 순서: 흰 바탕 → 피날레 뒷층(밤하늘·불꽃·사진) → 고양이 무대 → 피날레 앞층(문구) → 인트로(검은 막·빛·반짝이·시작 화면) */
+  #finale-back, #finale-front, #stage { position: fixed; inset: 0; pointer-events: none; }
+  /* 1:20 카메라 연출용 하늘: 화면 3배 높이 그라디언트(위=밤, 가운데=노을, 아래=흰색). 카메라가 올라가면 위쪽(밤)이 보임 */
+  #sky { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  #sky .grad { position: absolute; left: 0; top: 0; width: 100%; height: 300%; will-change: transform;
+    background: linear-gradient(to bottom, #0a0c2b 0%, #171a4a 14%, #2b2266 26%, #5a2f86 36%, #a8508f 44%, #ff8f86 51%, #ffc9a8 57%, #fff1e6 62%, #ffffff 66.6%, #ffffff 100%); }
+  /* ↑ 낮 동안엔 아래 1/3(66.7~100%)만 보이므로 흰색이 66.6%부터 시작해야 함 — 처음엔 76%라 낮 장면 내내 화면 위가 복숭아빛이었음 */
+  #sky .night { position: absolute; inset: 0; opacity: 0; will-change: transform, opacity; }
+  #sky .st { position: absolute; border-radius: 50%; background: #fff; box-shadow: 0 0 6px 1px rgba(255,255,255,.8); animation: tw 2.4s ease-in-out infinite; }
+  #sky .st4 { position: absolute; width: 18px; height: 18px; fill: #fff6c8; filter: drop-shadow(0 0 6px #fff3a0); animation: tw 1.8s ease-in-out infinite; }
+  #sky .moon { position: absolute; border-radius: 50%; background: radial-gradient(circle at 38% 36%, #fffdf2 0%, #fff4c7 45%, #ffe39a 70%, rgba(255,227,154,0) 71%);
+    box-shadow: 0 0 40px 12px rgba(255,236,170,.35), 0 0 120px 40px rgba(190,160,255,.18); }
+  @keyframes tw { 0%, 100% { opacity: .25; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }
+  #finale-back { z-index: 1; }
+  #stage { z-index: 2; overflow: hidden; }
+  #sparkles { position: fixed; inset: 0; pointer-events: none; z-index: 3; }
+  #finale-front { z-index: 3; }
+  #candle { position: fixed; inset: 0; pointer-events: none; z-index: 8; }
+  #letters { position: fixed; inset: 0; pointer-events: none; z-index: 4; overflow: hidden; }
+
+  /* 고양이·모자는 JS 가 매 프레임 transform 으로 움직임. 기준점 = 발밑(아래 가운데) */
+  .cat, .hat { position: absolute; left: 0; top: 0; transform-origin: 50% 100%; will-change: transform; opacity: 0; }
+
+  #curtain { position: fixed; inset: 0; background: #000; z-index: 10; }
+  #bloom {
+    position: fixed; left: 50%; top: 50%;
+    width: 40vmax; height: 40vmax; margin: -20vmax 0 0 -20vmax;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      #fff 0%, #fff 35%, #ffe6f7 50%, rgba(214, 226, 255, .55) 60%, rgba(255, 220, 245, 0) 70%);
+    transform: scale(0); z-index: 11; pointer-events: none;
+  }
+  #fx { position: fixed; inset: 0; z-index: 12; pointer-events: none; overflow: hidden; }
+  .spark { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+  .spark svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+  /* 시작 화면 = 낚시: 여친이 실제로 참여한 인스타 이벤트(발표 일주일 연기 중)의 '당첨 안내'인 척.
+     폰은 소리 나는 자동재생을 막으니 [상품권 받기] 탭이 곧 음악 시작 버튼 역할.
+     실제 기관·브랜드 로고는 일부러 안 씀(글자만) — 한 사람용 장난이어도 로고 베끼기는 피함 */
+  #gate {
+    position: fixed; inset: 0; z-index: 13; background: #f3f4f6; overflow-y: auto;
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    color: #191919; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); box-sizing: border-box;
+  }
+  #gate .card { width: 100%; max-width: 380px; background: #fff; border-radius: 20px; padding: 28px 22px 22px; box-sizing: border-box; box-shadow: 0 6px 24px rgba(0,0,0,.06); text-align: center; }
+  #gate .tag { display: inline-block; font-size: 12px; font-weight: 700; color: #e0457b; background: #ffeef4; border-radius: 99px; padding: 5px 10px; }
+  #gate h1 { font-size: 22px; line-height: 1.35; margin: 14px 0 6px; letter-spacing: -.02em; }
+  #gate .ev { font-size: 13.5px; color: #6b7280; line-height: 1.5; margin: 0; }
+  #gate .prize { margin: 22px 0 18px; border: 1px solid #eceef1; border-radius: 14px; padding: 18px 14px; display: flex; gap: 14px; align-items: center; text-align: left; }
+  #gate .prize .ic { width: 56px; height: 56px; border-radius: 12px; background: #f6efe6; display: grid; place-items: center; font-size: 30px; flex: none; }
+  #gate .prize b { display: block; font-size: 15.5px; margin-bottom: 3px; }
+  #gate .prize span { font-size: 12.5px; color: #8b9098; }
+  #gate button { width: 100%; height: 54px; border: 0; border-radius: 14px; background: #191919; color: #fff; font: inherit; font-size: 16.5px; font-weight: 700; cursor: pointer; }
+  #gate button:active { transform: scale(.98); }
+  #gate.loading button { background: #555; }
+  #gate .fine { font-size: 11.5px; color: #a0a4ab; margin: 12px 0 0; line-height: 1.5; }
+
+  /* 수정 요청용 슬라이드바: 주소에 ?edit 가 있을 때만 보임 (여친용 링크엔 안 붙이면 끝) */
+  #dev {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: none;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); box-sizing: border-box;
+    background: rgba(20, 20, 28, .82); color: #fff; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    font: 600 12.5px/1.3 -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  }
+  #dev .row { display: flex; align-items: center; gap: 6px; }
+  #dev button { flex: none; width: 36px; height: 32px; border: 0; border-radius: 8px; background: rgba(255,255,255,.14); color: #fff; font-size: 15px; }
+  #dev input[type=range] { flex: 1; min-width: 0; accent-color: #ff6fb5; height: 28px; }
+  #dev .lab { margin-top: 4px; text-align: center; letter-spacing: .01em; }
+  #dev .lab b { color: #ffd23f; }
+
+  /* 꾹 눌러 4배속 중 표시 */
+  #ff { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top)); z-index: 15; transform: translateX(-50%);
+    padding: 6px 12px; border-radius: 99px; background: rgba(20,20,28,.7); color: #fff; font: 700 13px/1 -apple-system, "Apple SD Gothic Neo", sans-serif;
+    letter-spacing: .04em; display: none; pointer-events: none; }
+  html, body { -webkit-touch-callout: none; }
+
+  #again {
+    position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 14;
+    width: 44px; height: 44px; border-radius: 50%; border: 0;
+    background: rgba(255,255,255,.75); color: #555; font-size: 22px; line-height: 44px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.15); display: none; cursor: pointer;
+  }
+</style>
+<script>
+  // 춤 동작 등록부. moves/*.js 가 registerMove(이름, {label, pose}) 로 채움 (규격은 moves/_test.js 참고)
+  window.MOVES = {};
+  window.registerMove = (name, m) => { window.MOVES[name] = m; };
+</script>
+<script src="beats.js"></script>
+<script src="moves/formations.js"></script>
+<script src="moves/jumps.js"></script>
+<script src="moves/comedy.js"></script>
+<script src="moves/vibe.js"></script>
+<script src="finale.js"></script>
+<script src="letters.js"></script>
+<script src="sparkles.js"></script>
+<script src="candle.js"></script>
+</head>
+<body>
+<div id="sky"><div class="grad"></div><div class="night"></div></div>
+<div id="finale-back"></div>
+<div id="stage"></div>
+<div id="sparkles"></div>
+<div id="finale-front"></div>
+<div id="letters"></div>
+<div id="candle"></div>
+<div id="curtain"></div>
+<div id="bloom"></div>
+<div id="fx"></div>
+<div id="gate">
+  <div class="card">
+    <span class="tag">🎁 이벤트 당첨 안내</span>
+    <h1>축하드립니다!<br>이벤트에 당첨되셨어요</h1>
+    <p class="ev">9월 ‘홍익인의 통학 루틴 밸런스 게임’ 이벤트</p>
+    <div class="prize">
+      <div class="ic">☕</div>
+      <div><b>스타벅스 1만원 상품권</b><span>모바일 상품권 1매</span></div>
+    </div>
+    <button type="button" id="claim">상품권 받기</button>
+    <p class="fine">* 당첨 안내일로부터 7일 이내에 수령해 주세요.</p>
+  </div>
+</div>
+<button id="again" aria-label="다시 보기">↻</button>
+<div id="ff">▶▶ 4배속</div>
+<div id="dev">
+  <div class="row">
+    <button id="dPlay" aria-label="재생/정지">⏸</button>
+    <button id="dPrev" aria-label="이전 장면">◀</button>
+    <input id="dSeek" type="range" min="0" max="139" step="0.05" value="0">
+    <button id="dNext" aria-label="다음 장면">▶</button>
+  </div>
+  <div class="lab" id="dLab"></div>
+</div>
+<audio id="bgm" src="audio/bgm.mp3" preload="auto"></audio>
+
+<script>
+(() => {
+  const CAT = { src: 'img/cat.png', w: 251, h: 322 };
+  const RATIO = CAT.w / CAT.h;
+  // 동물 종류 (2026-09-26 유저가 햄스터·토끼 추가). 전부 같은 '앞발 번쩍' 포즈의 흐릿한 짤이라 섞어도 한 무리처럼 보임.
+  //  ratio = 가로/세로, hx = 모자 가운데 x(폭 비율), hb = 모자 밑단 높이(발에서부터, 키 비율), hw = 모자 폭 배율, size = 고양이 대비 키
+  //  햄스터: 실제로 작은 동물이라 0.74배, 정수리(위에서 8%)에 모자. 토끼: 귀 때문에 키가 커 보여서 1.08배, 귀 사이(위에서 23%)에 모자 → 귀가 모자 양옆으로 삐죽
+  const SPECIES = {
+    cat:     { src: 'img/cat.png',     ratio: 251 / 322, hx: .52, hb: .86, hw: 1,   size: 1 },
+    hamster: { src: 'img/hamster.webp', ratio: 322 / 420, hx: .50, hb: .895, hw: .95, size: .74 },
+    rabbit:  { src: 'img/rabbit.webp',  ratio: 286 / 420, hx: .47, hb: .765, hw: .85, size: 1.08 },
+  };
+  const BEATS = window.BEATS;
+  const PHOTO_BEAT = 298;   // 사진이 "쾅" 착지하는 마디 첫박(≈122초). 이 2박 전부터 빙그르르 돌며 들어옴 (finale.js)
+
+  // ── 안무표: [시작 박, 동작 이름] — 4마디(16박)마다 바뀜. 시작 박은 전부 마디 첫박(beats.js 주석 참고)
+  //    없는 동작 이름이면 basic 으로 대체되니, 동작 파일이 빠져도 페이지는 안 깨짐
+  const SCHEDULE = [
+    [-8,  'basic'],      // 인트로: 등장하면서 기본 춤
+    [17,  'flipflop'],
+    [33,  'wave'],
+    [49,  'ganggang'],
+    [65,  'hatfly'],
+    [81,  'hatrelay'],
+    [97,  'conga'],
+    [113, 'spin'],
+    [129, 'solo'],
+    [145, 'tower'],
+    [161, 'pyramid'],
+    [177, 'ganggang'],   // 177~201: 템포 바뀌는 경과마디까지 이어서
+    [202, 'wave'],       // ── B구간(≈144BPM)
+    [218, 'jellyfish'],
+    [234, 'hatfly'],
+    [250, 'conga'],
+    [266, 'flipflop'],
+    [282, 'finale'],     // 한가운데 모여 점점 크게 점프 → 멈춤
+    [294, 'sides'],      // 양옆으로 흩어짐 → 296부터 사진이 돌며 등장 → 298 쾅
+  ];
+
+  // 편지 문장이 붙는 장면 = 사진 피날레 전까지의 18장면. [시작 박, 길이, 문장 높이(화면 비율)]
+  //  강강술래는 원이 화면 위쪽에 생겨서 문장을 아래로, 피날레 덩어리는 가운데라 문장을 아래로
+  const LETTER_Y = { ganggang: .78, finale: .76 };
+  const SCENES = SCHEDULE.slice(0, -1).map(([st, name], k) => [st, SCHEDULE[k + 1][0] - st, LETTER_Y[name] ?? .5]);
+
+  // 고양이별 모자·방향·모자 어긋남 (새로고침해도 같은 "대충 얹은" 모습 유지하려고 고정값)
+  const CATS = [   // kind: 고양이4·토끼2·햄스터2 를 줄마다 섞음
+    { kind: 'cat',     hat: 1, flip: 0, hw: .64, hx: -.05, hy: -.02, tilt: -13 },
+    { kind: 'rabbit',  hat: 2, flip: 1, hw: .56, hx: .03,  hy: -.04, tilt: 9 },
+    { kind: 'cat',     hat: 3, flip: 0, hw: .70, hx: .03,  hy: -.01, tilt: -4 },
+    { kind: 'hamster', hat: 4, flip: 0, hw: .54, hx: -.02, hy: -.03, tilt: 17 },
+    { kind: 'cat',     hat: 5, flip: 1, hw: .66, hx: .05,  hy: -.02, tilt: -9 },
+    { kind: 'hamster', hat: 6, flip: 0, hw: .58, hx: 0,    hy: 0,    tilt: 5 },
+    { kind: 'rabbit',  hat: 7, flip: 1, hw: .68, hx: -.03, hy: -.04, tilt: 13 },
+    { kind: 'cat',     hat: 8, flip: 1, hw: .57, hx: .01,  hy: -.01, tilt: -15 },
+  ];
+  const LAYOUT = {
+    wide: [[.15,.38,.86],[.38,.35,.82],[.62,.37,.86],[.85,.35,.82],[.12,.66,1],[.37,.69,1.05],[.63,.66,1],[.88,.69,1.05]],
+    tall: [[.20,.25,.88],[.50,.22,.86],[.80,.25,.88],[.32,.50,1],[.70,.51,1],[.19,.77,1.08],[.50,.80,1.1],[.81,.77,1.08]],
+  };
+
+  // ── 기본 동작 2개는 엔진에 내장 ──
+  // basic: 발 딛고 좌우로 기우뚱 + 박마다 통통 (박 위에서 발이 땅에 닿음)
+  registerMove('basic', { label: '기본 춤', pose(c) {
+    const h = c.size * c.home.s, sw = Math.cos(Math.PI * c.b);
+    return { x: c.home.x + sw * h * RATIO * .11, rot: sw * 7, lift: c.bounce(c.b % 1) * h * .09 };
+  }});
+  // sides: 피날레 — 사진(finale.js 와 같은 좌표) 양옆에 4마리씩. 왼쪽 무리·오른쪽 무리가 박마다 번갈아 점프, 마디 첫박엔 다 같이
+  registerMove('sides', { label: '양옆 응원단', pose(c) {
+    const { W, H, tall, i } = c;
+    const left = i % 2 === 0, k = i >> 1;          // 짝수=왼쪽, 홀수=오른쪽, k=그쪽에서 몇 번째
+    const pw = tall ? W * .56 : H * .46 * .75;
+    const gap = W / 2 - pw / 2;                     // 사진 옆 빈 폭
+    let x, y, h;
+    if (tall) {                                     // 세로: 한 줄로 4마리 세로 쌓기
+      h = Math.min(gap * 1.1 / RATIO, H * .17);
+      x = gap / 2; y = H * (.40 + k * .18);
+    } else {                                        // 가로: 2×2
+      h = Math.min(gap * .42 / RATIO, H * .3);        // 가로 화면: 처음 .36H 는 사진보다 고양이가 커서 사진이 묻히고 윗줄 모자가 문구에 닿았음
+      x = gap * (k % 2 ? .72 : .3); y = H * (k < 2 ? .62 : .97);
+    }
+    if (!left) x = W - x;
+    const beat = Math.floor(c.b), ph = c.b - beat;
+    const mine = (beat % 2 === 0) === left || beat % 4 === 0;
+    return {
+      x: x + Math.cos(Math.PI * c.b) * h * .06,
+      y, s: h * (c.home.sp || 1) / (c.size * c.home.s),   // 종류별 키 유지(햄스터는 작게)
+      sx: left ? -1 : 1,                          // 원본은 왼쪽을 봄 → 왼쪽 무리만 뒤집어 사진 쪽을 보게
+      rot: (left ? 1 : -1) * Math.cos(Math.PI * c.b) * 9,
+      lift: mine ? c.bounce(ph) * h * (beat % 4 === 0 ? .45 : .25) : c.bounce(ph) * h * .05,
+      hat: mine && beat % 4 === 0 ? { dy: -c.bounce(ph) * h * .25, rot: 20 * Math.sin(Math.PI * 2 * ph) } : undefined,
+    };
+  }});
+
+  // ── DOM ──
+  const stage = document.getElementById('stage');
+  const els = CATS.map((c) => {
+    const cat = new Image(); cat.className = 'cat'; cat.src = SPECIES[c.kind].src; cat.alt = '';
+    const hat = new Image(); hat.className = 'hat'; hat.src = `img/hat${c.hat}.webp`; hat.alt = '';
+    stage.append(cat, hat);
+    return { cat, hat };
+  });
+
+  let L; // 현재 배치 { W, H, tall, size, homes[] }
+  function layout() {
+    const W = innerWidth, H = innerHeight, tall = H > W * 1.05;
+    const size = tall ? Math.min(H * .25, (W / 3) * 1.25 / RATIO) : Math.min(H * .44, (W / 4) * 1.3 / RATIO);
+    const homes = (tall ? LAYOUT.tall : LAYOUT.wide).map(([x, y, s], i) => {
+      const h = size * s, sp = SPECIES[CATS[i].kind].size;
+      return { x: x * W, y: y * H + h / 2 + h * .12, s: s * sp, sp };   // x,y = 발밑 (발 위치는 종류와 무관하게 줄 맞춤)
+    });
+    L = { W, H, tall, size, homes };
+    els.forEach(({ cat, hat }, i) => {
+      const sp = SPECIES[CATS[i].kind], h0 = size * homes[i].s, w0 = h0 * sp.ratio;
+      cat.style.width = w0 + 'px'; cat.style.height = h0 + 'px';
+      hat.style.width = (CATS[i].hw * sp.hw * h0 * RATIO) + 'px';   // 모자 크기는 고양이 기준 폭으로 (토끼가 홀쭉해도 모자는 안 작아지게)
+    });
+  }
+  layout();
+  addEventListener('resize', layout);
+
+  // ── 음악 시계 ──
+  const audio = document.getElementById('bgm');
+  let started = false, audioOK = true, fakeStart = 0, endedAt = null, clk = null, rate = 1;   // rate = 꾹 누르기 빨리감기 배속
+  let frozenAt = null;   // 검증용: 시계를 특정 시각에 고정 (__bday.setClock)
+  function now() {  // 초 단위 곡 위치. currentTime 이 뚝뚝 갱신되는 브라우저가 있어 사이는 performance 로 메움
+    const p = performance.now();
+    if (frozenAt !== null) return frozenAt;
+    if (!audioOK) return (p - fakeStart) / 1000 * rate;
+    if (endedAt !== null) return audio.duration + (p - endedAt) / 1000;
+    const a = audio.currentTime;
+    if (audio.paused) return a;
+    if (!clk || a !== clk.a) clk = { a, p };
+    return clk.a + Math.min(.25 * rate, (p - clk.p) / 1000 * rate);
+  }
+  const NB = BEATS.length;
+  function beatAt(t) {  // 초 → 박(실수). 곡 밖은 가장 가까운 박 간격으로 연장
+    if (t <= BEATS[0]) return (t - BEATS[0]) / (BEATS[1] - BEATS[0]);
+    if (t >= BEATS[NB - 1]) return NB - 1 + (t - BEATS[NB - 1]) / (BEATS[NB - 1] - BEATS[NB - 2]);
+    let lo = 0, hi = NB - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (BEATS[m] <= t) lo = m; else hi = m; }
+    return lo + (t - BEATS[lo]) / (BEATS[lo + 1] - BEATS[lo]);
+  }
+
+  // ── 자세 계산 + 동작 전환 블렌드 ──
+  const hash = (i, k) => { const v = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return v - Math.floor(v); };
+  const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  const bounce = p => Math.abs(Math.sin(Math.PI * p));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const BLEND = 1.5; // 동작 바뀔 때 이전 자세에서 새 자세로 넘어가는 박 수
+  let curIdx = -1, blendFrom = null, blendBeat = 0, last = [];
+
+  function full(p, c) {
+    const h = p.hat || {};
+    return {
+      // 방향: 동작이 sx 를 정하면 그대로(강강술래·기차놀이처럼 가는 쪽을 봐야 하는 동작), 안 정하면 고양이별 기본 좌우반전.
+      // (동작이 정한 sx 에 기본 반전을 또 곱하면 절반이 뒤로 걸음 — sx=1 은 원본 그림대로 '왼쪽을 봄')
+      x: p.x ?? c.home.x, y: p.y ?? c.home.y, s: p.s ?? 1, rot: p.rot ?? 0, sx: p.sx ?? (CATS[c.i].flip ? -1 : 1),
+      lift: p.lift ?? 0, opacity: p.opacity ?? 1, z: p.z,
+      hdx: h.dx ?? 0, hdy: h.dy ?? 0, hrot: h.rot ?? 0, hs: h.s ?? 1,
+    };
+  }
+  const KEYS = ['x', 'y', 's', 'rot', 'sx', 'lift', 'opacity', 'hdx', 'hdy', 'hrot', 'hs'];
+
+  function poses(beat) {
+    let idx = 0;
+    for (let k = 0; k < SCHEDULE.length; k++) if (beat >= SCHEDULE[k][0]) idx = k;
+    if (idx !== curIdx) {             // 동작이 바뀜 → 지금 자세를 출발점으로 저장
+      // 각도는 -180~180 으로 접어서 저장 — 안 그러면 720도 돈 상태에서 0도로 섞일 때 거꾸로 두 바퀴 풀림(검수 확정: 177박 강강술래)
+      const wrap = a => a - 360 * Math.round(a / 360);
+      if (curIdx !== -1 && last.length) { blendFrom = last.map(o => ({ ...o, rot: wrap(o.rot), hrot: wrap(o.hrot) })); blendBeat = beat; }
+      curIdx = idx;
+    }
+    const [start, name] = SCHEDULE[idx];
+    const next = SCHEDULE[idx + 1];
+    const len = next ? Math.max(4, Math.floor((next[0] - start) / 4) * 4) : 32;
+    const move = MOVES[name] || MOVES.basic;
+    const k = blendFrom ? ease(Math.min(1, Math.max(0, (beat - blendBeat) / BLEND))) : 1;
+    if (k >= 1) blendFrom = null;
+    return L.homes.map((home, i) => {
+      const c = { i, n: 8, b: beat - start, len, beat, W: L.W, H: L.H, tall: L.tall, size: L.size, home, homes: L.homes,
+                  rnd: kk => hash(i, kk), ease, bounce };
+      let p;
+      try { p = full(move.pose(c) || {}, c); } catch (e) { p = full(MOVES.basic.pose(c), c); }
+      for (const key of KEYS) if (!Number.isFinite(p[key])) p = full(MOVES.basic.pose(c), c);  // 동작 버그로 NaN 나와도 화면은 안 깨지게
+      if (blendFrom && blendFrom[i]) {
+        const f = blendFrom[i], o = { z: p.z };
+        for (const key of KEYS) o[key] = lerp(f[key], p[key], k);
+        p = o;
+      }
+      return p;
+    });
+  }
+
+  // 등장 연출: 첫 마디 첫박(1번 박)부터 1/4박 간격으로 한 마리씩 퐁
+  const POP_ORDER = [5, 1, 6, 3, 0, 7, 2, 4];
+  const popAt = []; POP_ORDER.forEach((idx, k) => { popAt[idx] = 1 + k * .25; });
+  let popped = false;
+  const backOut = t => { const s = 2.2; t -= 1; return t * t * ((s + 1) * t + s) + 1; };
+
+  // 편지 연출이 한 점을 가리키라고 하면(예: 2장면의 거대한 '8'), 모든 동물이 그쪽을 보고 몸을 기울임.
+  //  원본 그림은 왼쪽을 봄 → 점이 왼쪽이면 sx=+1, 오른쪽이면 -1. k(0~1)로 부드럽게 섞음
+  function attend(P, beat) {
+    if (!window.Letters || typeof Letters.attention !== 'function') return;
+    let a = null;
+    try { a = Letters.attention(beat, L.W, L.H); } catch (e) { return; }
+    if (!a || !(a.k > 0)) return;
+    const k = Math.min(1, a.k);
+    P.forEach(p => {
+      const right = a.x > p.x ? 1 : -1;
+      p.sx = lerp(p.sx, -right, k);
+      p.rot = lerp(p.rot, right * 14, k);                 // 가리키는 쪽으로 몸을 쭉
+      p.lift *= 1 - .6 * k;
+    });
+  }
+
+  // ── 동물 콕 찌르기: 그 동물 모자만 빙글빙글 하늘로 날아갔다가 머리에 쏙 (유저 요청) ──
+  //  박과 무관한 장난이라 실제 시간(ms)으로 진행. 착지 순간 '뿅' + 동물이 살짝 찌그러짐
+  const HAT_FLY_MS = 1150;
+  const hatFly = CATS.map(() => null);   // 날기 시작한 시각(performance.now) 또는 null
+  const hatLanded = CATS.map(() => false);
+  function flyHat(i) {
+    if (hatFly[i] && performance.now() - hatFly[i] < HAT_FLY_MS * .8) return;   // 날아가는 중 연타는 무시(착지 직전이면 다시 날림)
+    hatFly[i] = performance.now(); hatLanded[i] = false;
+    sfx('spin', .45);
+  }
+  function applyHatFly(P) {
+    const tNow = performance.now();
+    P.forEach((p, i) => {
+      if (!hatFly[i]) return;
+      const t = (tNow - hatFly[i]) / HAT_FLY_MS;
+      if (t >= 1.25) { hatFly[i] = null; return; }
+      if (t < 1) {
+        const h = L.size * L.homes[i].s * p.s;
+        const top = Math.max(L.H * .3, (p.y - p.lift) - h * .6);     // 화면 위쪽 근처까지 (너무 낮은 자리의 동물도 충분히 높이)
+        p.hdy += -top * 4 * t * (1 - t);                               // 포물선: 올라갔다 내려옴
+        p.hdx += Math.sin(t * Math.PI * 2) * h * .12;                  // 살랑살랑 옆으로
+        p.hrot += 720 * (1 - Math.pow(1 - t, 2));                      // 두 바퀴 빙글빙글 (끝에서 느려지며 똑바로)
+        p.hs *= 1 + .35 * Math.sin(Math.PI * t);                       // 높이 뜰수록 살짝 커짐(가까워 보이게)
+        if (t > .97 && !hatLanded[i]) { hatLanded[i] = true; sfx('pop', .6); }
+      } else {
+        const u = (t - 1) / .25;                                       // 착지 후 0.29초: 머리가 쏙 눌렸다 펴짐
+        p.s *= 1 - .09 * Math.sin(Math.PI * u);
+      }
+    });
+  }
+
+  function render(beat) {
+    const P = poses(beat);
+    attend(P, beat);
+    applyHatFly(P);
+    last = P;
+    const { size } = L, D = Math.PI / 180;
+    P.forEach((p, i) => {
+      const { cat, hat } = els[i], cfg = CATS[i];
+      let pop = 1;
+      if (!popped) { const t = (beat - popAt[i]) / .6; pop = t <= 0 ? 0 : t >= 1 ? 1 : backOut(t); }
+      const sp = SPECIES[cfg.kind], h0 = size * L.homes[i].s, w0 = h0 * sp.ratio;
+      const s = Math.max(.001, p.s * pop), sx = p.sx, dir = sx < 0 ? -1 : 1;
+      const fx = p.x, fy = p.y - p.lift;
+      const z = 10000 + Math.round((p.z ?? p.y) * 2);
+      cat.style.transform = `translate(${fx - w0 / 2}px,${fy - h0}px) rotate(${p.rot}deg) scale(${s * sx},${s})`;
+      cat.style.opacity = pop > 0 ? p.opacity : 0;
+      cat.style.zIndex = z;
+      // 모자: 머리 위 기준점(고양이 원본에서 x 52%, 바닥에서 86%)을 고양이와 똑같이 크기·회전시켜 화면 좌표로 옮긴 뒤 얹음
+      const ax = (w0 * (sp.hx + cfg.hx) - w0 / 2) * s * sx, ay = -h0 * (sp.hb + cfg.hy) * s;
+      const r = p.rot * D, hx = fx + ax * Math.cos(r) - ay * Math.sin(r), hy = fy + ax * Math.sin(r) + ay * Math.cos(r);
+      const hw = cfg.hw * sp.hw * h0 * RATIO, hh = hw * (hat.naturalHeight / hat.naturalWidth || 1.03);
+      const wob = Math.sin(Math.PI * beat) * 5;   // 모자는 늘 살짝 흔들흔들
+      const hs = s * p.hs;
+      // 모자 가로폭은 고양이와 똑같이 |sx| 를 따름. (처음엔 최소 30% 유지했는데, 기차놀이에서 고양이가 옆면이 되어 사라질 때 모자만 허공에 떠 보였음)
+      hat.style.transform = `translate(${hx + p.hdx - hw / 2}px,${hy + p.hdy - hh}px) rotate(${p.rot + dir * cfg.tilt + wob + p.hrot}deg) scale(${hs * p.sx},${hs})`;
+      // 다 받아지기 전의 모자는 위에서부터 한 줄씩 그려져 꼭대기만 둥둥 뜸 → 완전히 받아진 뒤에만 보이게 (검수 확정 항목)
+      hat.style.opacity = pop > 0 && hat.complete && hat.naturalWidth ? p.opacity : 0;
+      hat.style.zIndex = z + 1;
+    });
+    if (!popped && beat > popAt[POP_ORDER[7]] + 1) popped = true;
+  }
+
+  // ── 1:20 카메라 연출 + 밤 배경 ──
+  // 곡의 템포가 바뀌는 경과마디(≈1:20)에 카메라가 위로 올라감 → 고양이들 아래로 빠지고 하늘이 흰색→노을→밤,
+  // 별 반짝이다가(≈1:22) 카메라가 다시 내려오면 이제 밤 배경에서 춤. 이후 사진 피날레(밤하늘)로 자연스럽게 이어짐.
+  // 전부 박(beat)의 함수라 슬라이드바로 앞뒤 이동해도 상태가 꼬이지 않음.
+  const CAM_UP = [200, 203], CAM_DOWN = [205, 208];
+  const sky = document.getElementById('sky'), skyGrad = sky.querySelector('.grad'), skyNight = sky.querySelector('.night');
+  (() => {  // 별 70개 + 큰 반짝이 6개 + 달 (고정 배치: 새로고침해도 같은 하늘)
+    let html = '';
+    for (let i = 0; i < 70; i++) {
+      const x = hash(i, 1) * 100, y = hash(i, 2) * 92, r = 1 + hash(i, 3) * 2.2;
+      html += `<i class="st" style="left:${x}%;top:${y}%;width:${r}px;height:${r}px;animation-delay:${(-hash(i, 4) * 2.4).toFixed(2)}s"></i>`;
+    }
+    for (let i = 0; i < 6; i++) {
+      html += `<svg class="st4" viewBox="-50 -50 100 100" style="left:${(8 + hash(i, 5) * 84).toFixed(1)}%;top:${(6 + hash(i, 6) * 70).toFixed(1)}%;animation-delay:${(-hash(i, 7) * 1.8).toFixed(2)}s"><path d="M0-50C4-14 14-4 50 0 14 4 4 14 0 50-4 14-14 4-50 0-14-4-4-14 0-50Z"/></svg>`;
+    }
+    html += '<div class="moon"></div>';
+    skyNight.innerHTML = html;
+  })();
+  const moon = skyNight.querySelector('.moon');
+  const lettersEl = document.getElementById('letters');
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  function camera(beat) {
+    const H = L.H, m = Math.min(L.W, L.H) * .2;
+    moon.style.cssText = `left:${L.W * .72 - m / 2}px;top:${H * .14 - m / 2}px;width:${m}px;height:${m}px`;
+    const up = ease(clamp01((beat - CAM_UP[0]) / (CAM_UP[1] - CAM_UP[0])));
+    const down = ease(clamp01((beat - CAM_DOWN[0]) / (CAM_DOWN[1] - CAM_DOWN[0])));
+    // 하늘: 올라가는 동안 3배 높이 그라디언트를 아래→위로 훑음. 다 올라간 뒤엔 계속 밤(위쪽 고정)
+    // (px 로 -2H 를 주면 innerHeight 와 실제 고정층 높이가 다른 환경—아이폰 주소창, 헤드리스—에서 어긋나 낮에도 위가 노을빛이었음
+    //  → 자기 높이(=화면 3배)의 -66.667% 로 옮기면 어떤 환경에서도 정확히 아래 1/3 이 보임)
+    skyGrad.style.transform = `translateY(${(-200 / 3) * (1 - up)}%)`;
+    // 별·달: 하늘이 밤이 될 즈음부터 켜짐. 카메라가 내려올 땐 살짝 위로 밀려 올라감(시차) → 내려오는 느낌
+    skyNight.style.opacity = clamp01((up - .55) / .45);
+    skyNight.style.transform = `translateY(${-down * H * .12}px)`;
+    // 고양이·문장: 카메라가 올라가면 화면 아래로 빠졌다가, 내려올 때 아래에서 다시 올라옴
+    const off = (up - down) * H * 1.15;
+    const t = off ? `translateY(${off}px)` : '';
+    if (stage.style.transform !== t) { stage.style.transform = t; lettersEl.style.transform = t; }
+  }
+
+  // ── 반짝이 ──
+  const fx = document.getElementById('fx');
+  const STAR = '<svg viewBox="-50 -50 100 100"><path d="M0-50C4-14 14-4 50 0 14 4 4 14 0 50-4 14-14 4-50 0-14-4-4-14 0-50Z"/></svg>';
+  function spark(x, y, size, color, delay, dur, dx = 0, dy = 0, glow = true) {
+    const el = document.createElement('div');
+    el.className = 'spark'; el.innerHTML = STAR;
+    el.style.width = el.style.height = size + 'px'; el.style.fill = color;
+    if (glow) el.style.filter = `drop-shadow(0 0 ${size * .25}px ${color})`;
+    fx.appendChild(el);
+    const at = (tx, ty, sc, r) => `translate(${x + tx - size / 2}px,${y + ty - size / 2}px) scale(${sc}) rotate(${r}deg)`;
+    const a = el.animate([
+      { transform: at(0, 0, 0, 0), opacity: 0 },
+      { transform: at(dx * .4, dy * .4, 1, 70), opacity: 1, offset: .35 },
+      { transform: at(dx, dy, 0, 180), opacity: 0 },
+    ], { duration: dur, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'both' });
+    a.onfinish = a.oncancel = () => el.remove();
+  }
+  const NIGHT = ['#ffffff', '#ffd6f2', '#fff4a8', '#c8f1ff', '#e3d2ff'];
+  const DAY = ['#ff8fd0', '#ffcf3d', '#6fcfff', '#b394ff', '#7fe0b8'];
+  const pick = (arr, i) => arr[((i % arr.length) + arr.length) % arr.length];
+
+  // ── 인트로: 음악 0초 기준. 0~1초는 곡의 무음 → 그동안 샤랄라, 첫 마디 첫박(1.43초)에 화면이 하얗게 터짐 ──
+  function intro(at) {   // at = 이 함수가 불린 순간의 곡 위치(초). 모든 지연을 곡 시간에 맞춤
+    const ms = t => Math.max(0, (t - at) * 1000);
+    const W = innerWidth, H = innerHeight, cx = W / 2, cy = H / 2, vmin = Math.min(W, H);
+    const DOWN = BEATS[1];
+    for (let i = 0; i < 18; i++) {           // ① 왼→오 하프 긁듯 차르르
+      const t = i / 17;
+      spark(W * (.18 + .64 * t), cy + Math.sin(t * Math.PI * 1.5) * vmin * .12 - vmin * .03,
+        vmin * (.05 + .04 * Math.sin(t * Math.PI)), pick(NIGHT, i), ms(.05 + i * .045), 900);
+    }
+    const bloom = document.getElementById('bloom');   // ② 가운데서 빛이 번져 첫박에 화면 가득
+    bloom.animate([{ transform: 'scale(0)' }, { transform: 'scale(12)' }],
+      { duration: Math.max(100, (DOWN - Math.max(.7, at)) * 1000), delay: ms(.7), easing: 'cubic-bezier(.5,0,.8,.4)', fill: 'forwards' });
+    for (let i = 0; i < 46; i++) {
+      const ang = (i / 46) * Math.PI * 2 + (i % 3) * .4, dist = vmin * (.25 + (i % 5) * .09);
+      spark(cx, cy, vmin * (.03 + (i % 4) * .015), pick(NIGHT, i), ms(.75 + (i % 6) * .03), 1100, Math.cos(ang) * dist, Math.sin(ang) * dist);
+    }
+    document.getElementById('curtain').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, delay: ms(DOWN - .3), fill: 'forwards' });
+    bloom.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 850, delay: ms(DOWN), easing: 'ease-out', fill: 'forwards' });
+  }
+
+  // ── 효과음 ──
+  // WebAudio 로 재생: <audio> 여러 개는 아이폰에서 동시에 안 나거나 탭 없이는 막힘. 탭 순간 AudioContext 를 켜 두면 그 뒤로는 언제든 재생됨.
+  // audioSession=playback: 아이폰 무음 스위치가 켜져 있어도 효과음이 나오게 (배경음악 <audio> 는 원래 나옴)
+  const SFX = ['sharalala', 'applause', 'whistle', 'cheer', 'pop', 'firework', 'firework_bang', 'spin', 'tada'];   // 출처·라이선스: audio/sfx/SOURCES.md
+  const sfxRaw = {}, sfxBuf = {};
+  // 도착하는 대로 해독 (예전엔 탭 순간에 도착해 있던 것만 해독해서, 늦게 온 효과음은 끝까지 무음이었음 — 검수 확정)
+  SFX.forEach(n => fetch(`audio/sfx/${n}.mp3`).then(r => r.ok ? r.arrayBuffer() : null).then(a => { if (a) { sfxRaw[n] = a; decodeSfx(); } }).catch(() => {}));
+  let sharaWanted = false;   // 탭했는데 샤랄라가 아직 해독 전이면, 해독 끝나는 순간 울림
+  let actx = null;
+  function sfxUnlock() {   // 반드시 탭 이벤트 안에서 호출
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC || actx) return;
+    try {
+      actx = new AC(); actx.resume && actx.resume();
+      const b = actx.createBuffer(1, 1, 22050), src = actx.createBufferSource();   // 아이폰 잠금 해제용 무음 1샘플
+      src.buffer = b; src.connect(actx.destination); src.start(0);
+    } catch (e) { actx = null; }
+  }
+  function decodeSfx() {
+    if (!actx) return;
+    SFX.forEach(n => {
+      if (sfxBuf[n] || !sfxRaw[n]) return;
+      const raw = sfxRaw[n]; delete sfxRaw[n];
+      try { actx.decodeAudioData(raw, buf => { sfxBuf[n] = buf; if (n === 'sharalala' && sharaWanted && now() < 1.2) { sharaWanted = false; sfx(n, .8); } }, () => {}); } catch (e) {}
+    });
+  }
+  const sfxLog = [];   // 검증용: 어떤 효과음이 몇 박에 울렸는지 (__bday.sfxLog)
+  function sfx(name, vol = .8) {
+    if (sfxLog.length < 200) sfxLog.push([name, +beatAt(now()).toFixed(2)]);
+    if (!actx || !sfxBuf[name] || !audioOK || audio.muted) return;
+    try {
+      const src = actx.createBufferSource(), g = actx.createGain();
+      src.buffer = sfxBuf[name]; g.gain.value = vol;
+      src.connect(g); g.connect(actx.destination); src.start(0);
+    } catch (e) {}
+  }
+  // 음악 박에 맞춘 효과음 큐. pre = 소리의 '핵심 타격'이 파일 시작에서 몇 초 뒤에 있는지 → 그만큼 먼저 틀어 박에 맞춤
+  // 측정값(효과음 에이전트가 디코딩해서 잰 타격 지점): firework 는 '피융' 뒤 1.117초에 '펑', spin(슬라이드 휘슬)은 0.95초에 최고조
+  const SFX_PRE = { pop: .01, firework: 1.117, firework_bang: .01, spin: .95, tada: .012, whistle: .03, cheer: 0, applause: 0 };
+  const CUES = [];
+  POP_ORDER.forEach((idx, k) => CUES.push([1 + k * .25, 'pop', .45]));        // 고양이 퐁퐁 등장
+  [[65, 'whistle', .7], [129, 'whistle', .7], [161, 'cheer', .55], [234, 'whistle', .7], [282, 'cheer', .6],
+   [202.2, 'spin', .7],                      // 1:20 카메라 올라감: 슬라이드 휘슬이 200박에 시작해 올라가는 내내 상승
+   [CAM_DOWN[0], 'whistle', .6], [CAM_DOWN[1] - .5, 'cheer', .5],   // 내려오기 시작 휘파람, 고양이들 다시 보이면 환호
+   [PHOTO_BEAT, 'spin', .8],                 // 사진이 빙그르르 도는 동안 슬라이드 휘슬이 올라가서 착지 순간 최고조
+   [PHOTO_BEAT, 'tada', .9], [PHOTO_BEAT, 'applause', .6], [PHOTO_BEAT + .5, 'cheer', .7],
+   [PHOTO_BEAT + 1, 'firework', .75],        // 첫 불꽃은 '피융~펑' 전체, 펑이 착지 다음 박에 맞게
+   [PHOTO_BEAT + 16, 'whistle', .6]].forEach(c => CUES.push(c));
+  for (let b = PHOTO_BEAT + 4; b < PHOTO_BEAT + 40; b += 2) CUES.push([b, 'firework_bang', b % 4 === PHOTO_BEAT % 4 ? .55 : .35]);  // 그 뒤로는 '펑'만 반 마디마다 (첫박은 크게)
+  function timeOfBeat(b) { const i = Math.max(0, Math.min(NB - 2, Math.floor(b))); return BEATS[i] + (b - i) * (BEATS[i + 1] - BEATS[i]); }
+  let lastCueT = null;
+  function runCues(t) {
+    if (rate > 1) { lastCueT = t; return; }
+    if (lastCueT !== null && t < lastCueT && lastCueT - t < .5) return;   // 버퍼링 멈춤 뒤 시계가 살짝 되돌아가면 같은 효과음이 두 번 울렸음(검수 확정)
+    if (lastCueT !== null && t > lastCueT && t - lastCueT < .5) {           // 탭 전환 후 몰아서 터지는 것 방지(0.5초 넘게 건너뛰면 무시)
+      for (const [b, name, vol] of CUES) {
+        const ct = timeOfBeat(b) - (SFX_PRE[name] || 0);
+        if (ct > lastCueT && ct <= t) sfx(name, vol);
+      }
+    }
+    lastCueT = t;
+  }
+
+  // ── 매 프레임 ──
+  const back = document.getElementById('finale-back'), front = document.getElementById('finale-front');
+  const hasFinale = window.Finale && typeof Finale.frame === 'function';
+  if (hasFinale) { try { Finale.init(back, front); Finale.frame({ beat: PHOTO_BEAT - 1.99, start: PHOTO_BEAT, W: L.W, H: L.H, tall: L.tall, dt: 0, ended: false }); Finale.frame({ beat: 0, start: PHOTO_BEAT, W: L.W, H: L.H, tall: L.tall, dt: 0, ended: false }); } catch (e) { console.error(e); } }
+  // ↑ 두 번째 호출(0박)로 곧바로 숨김·초기화 — 첫 화면(시작 화면이 덮고 있음) 동안 피날레 층·글씨 캔버스를 미리 만들어 둬서 296박에 0.1초 멈칫하던 것 제거(검수 확정)
+  const Q = new URLSearchParams(location.search);
+  const DEMO = Q.has('demo') || Q.has('shot');   // 문장이 비어 있으면 'N번 문장 자리' 표시 (확인용)
+  if (window.Letters) Letters.init(document.getElementById('letters'));
+  const hasSpark = window.Sparkles && typeof Sparkles.frame === 'function';
+  if (hasSpark) { try { Sparkles.init(document.getElementById('sparkles')); } catch (e) { console.error(e); } }
+  const hasCandle = window.Candle && typeof Candle.frame === 'function';
+  if (hasCandle) { try { Candle.init(document.getElementById('candle'), { sfx: (n, v) => sfx(n, v) }); } catch (e) { console.error(e); } }
+  function drawExtras(beat, dt) {   // 반짝이(밤=카메라가 다 올라간 203박부터)·케이크 촛불
+    const sk = SCENES.find(([st, len]) => beat >= st && beat < st + len);   // 문장 줄 근처는 반짝이를 차분하게(textY)
+    if (hasSpark) { try { Sparkles.frame({ beat, W: L.W, H: L.H, dt, night: beat >= CAM_UP[1], textY: sk ? sk[2] : .5 }); } catch (e) { console.error(e); } }
+    if (hasCandle) { try { Candle.frame({ beat, start: PHOTO_BEAT, W: L.W, H: L.H, tall: L.tall, dt, ended: endedAt !== null }); } catch (e) { console.error(e); } }
+  }
+  function drawLetter(beat) {
+    if (!window.Letters) return;
+    const k = SCENES.findIndex(([st, len]) => beat >= st && beat < st + len);
+    try { Letters.frame({ beat, scenes: SCENES, W: L.W, H: L.H, tall: L.tall, demo: DEMO, y: k >= 0 ? SCENES[k][2] : .5 }); } catch (e) { console.error(e); }
+  }
+  let lastBeatInt = null, lastP = performance.now();
+  function frame() {
+    const p = performance.now(), dt = Math.min(.1, (p - lastP) / 1000); lastP = p;
+    const tNow = now(), beat = beatAt(tNow);
+    render(beat);
+    camera(beat);
+    runCues(tNow);
+    const bi = Math.floor(beat);
+    if (bi !== lastBeatInt) {                 // 마디 첫박마다 흰 배경에 반짝이 두 개 (사진 등장 전까지)
+      if (!hasSpark && lastBeatInt !== null && bi > lastBeatInt && bi >= 5 && bi < PHOTO_BEAT - 2 && (bi - 1) % 4 === 0) {
+        for (let k = 0; k < 2; k++) spark(hash(bi, k) * L.W, hash(bi, k + 7) * L.H * .9, Math.min(L.W, L.H) * .04, pick(DAY, bi + k), 0, 1000, 0, 0, false);
+      }
+      lastBeatInt = bi;
+    }
+    if (hasFinale) { try { Finale.frame({ beat, start: PHOTO_BEAT, W: L.W, H: L.H, tall: L.tall, dt, ended: endedAt !== null }); } catch (e) { console.error(e); } }
+    drawLetter(beat);
+    drawExtras(beat, dt);
+    requestAnimationFrame(frame);
+  }
+
+  // ── 시작 ──
+  const gate = document.getElementById('gate');
+  const imgs = [...document.images];
+  const ready = Promise.race([
+    Promise.all(imgs.map(im => im.decode ? im.decode().catch(() => {}) : new Promise(r => { im.onload = im.onerror = r; }))),
+    new Promise(r => setTimeout(r, 12000)),
+  ]);
+  let isReady = false, running = false, userPaused = false;
+  audio.addEventListener('playing', () => {
+    if (!audioOK && running && endedAt === null) {       // 늦게 뜬 음악을 지금 화면 시계 위치로 옮겨서 합류
+      const t = now(); audioOK = true; clk = null;
+      try { audio.currentTime = t; } catch (e) {}
+    }
+  });
+  ready.then(() => { isReady = true; });
+  const claim = document.getElementById('claim');
+  function go() {
+    if (started) return;
+    started = true;
+    sfxUnlock();
+    // 탭 순간에 바로 play() — 폰 브라우저는 이 순간에만 소리를 허락함. 아직 준비 전이면 곧바로 멈춰 두고(잠금만 해제) 준비되면 처음부터 재생
+    const pr = audio.play();
+    if (!isReady) {
+      if (pr && pr.then) pr.then(() => { if (!isReady) audio.pause(); }).catch(() => {});
+      gate.classList.add('loading'); claim.textContent = '상품권 불러오는 중…';
+      ready.then(() => begin());
+    } else begin(pr);
+  }
+  function begin(pr) {
+    gate.style.transition = 'opacity .15s'; gate.style.opacity = 0;
+    setTimeout(() => gate.remove(), 200);
+    let kicked = false;
+    const kick = () => { if (kicked) return; kicked = true; running = true; decodeSfx(); if (sfxBuf.sharalala) sfx('sharalala', .8); else sharaWanted = true; intro(now()); requestAnimationFrame(frame); };
+    if (!pr) { audio.currentTime = 0; pr = audio.play(); }
+    if (pr && pr.then) {
+      pr.then(() => kick()).catch(() => { audioOK = false; fakeStart = performance.now(); kick(); });
+    } else kick();
+    // 음원이 2.5초 안에 안 나오면 일단 소리 없이 진행하되 음악을 멈추진 않음 → 나중에 재생되면 'playing'에서 화면 시계에 맞춰 합류(검수 확정: 예전엔 끝까지 무음)
+    setTimeout(() => { if (!kicked) { audioOK = false; fakeStart = performance.now(); kick(); } }, 2500);
+  }
+  claim.addEventListener('click', go);
+  // 검증용 손잡이: 로컬 테스트 서버는 음원 건너뛰기(Range)를 못 해서, 박 위치로 시계를 직접 고정해 장면을 확인함
+  window.__bday = { go, audio, beatAt, now, sfxLog,
+    setClock(beat) {   // 창이 숨겨져 있으면 rAF 가 멈추므로 여기서 직접 한 번 그림
+      const i = Math.floor(beat), f = beat - i; frozenAt = BEATS[i] + f * (BEATS[i + 1] - BEATS[i]);
+      render(beat);
+      camera(beat);
+      if (hasFinale) Finale.frame({ beat, start: PHOTO_BEAT, W: L.W, H: L.H, tall: L.tall, dt: 1 / 60, ended: false });
+      drawLetter(beat);
+      drawExtras(beat, 1 / 60);
+    },
+    release() { frozenAt = null; } };
+
+  // ── 터치/클릭 분배 ──
+  //  시작 뒤에만. 슬라이드바·다시보기·촛불 케이크(.cd-hit 는 candle.js 가 직접 처리)는 건드리지 않음.
+  //  사진 위 탭은 finale.js 가 먼저 가져가고(한 바퀴 + 하트 불꽃), 아니면 손가락 아래 동물 중 맨 앞 것의 모자가 날아감
+  addEventListener('pointerdown', e => {
+    if (!started || document.getElementById('gate')) return;
+    if (e.target.closest && e.target.closest('#dev, #again, .cd-hit')) return;
+    const x = e.clientX, y = e.clientY;
+    if (window.Finale && typeof Finale.tap === 'function') { try { if (Finale.tap(x, y)) { sfx('spin', .5); sfx('firework_bang', .6); return; } } catch (err) {} }   // 사진 탭: 한 바퀴 + 하트 불꽃 (소리는 엔진이 냄)
+    let best = -1, bestZ = -1;
+    els.forEach(({ cat, hat }, i) => {
+      if (cat.style.opacity === '0') return;
+      const pad = 10;                                                  // 손가락이 조금 빗나가도 맞게
+      for (const el of [cat, hat]) {
+        const r = el.getBoundingClientRect();
+        if (x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad) {
+          const z = +el.style.zIndex || 0;
+          if (z > bestZ) { bestZ = z; best = i; }
+        }
+      }
+    });
+    if (best >= 0) flyHat(best);
+  }, { passive: true });
+
+  // ── 꾹 누르기 빨리감기 (유저 요청) ──
+  //  손가락/마우스를 2초 누르고 있으면 4배속, 떼는 순간 1배속. 음악 playbackRate 를 바꾸면 박 시계가 음악을 따르므로 춤·편지·피날레가 전부 같이 빨라짐.
+  //  4배는 브라우저가 소리를 내주는 상한(크롬은 4 초과면 음소거)이라 딱 4.
+  const ffEl = document.getElementById('ff');
+  let holdTimer = null;
+  function setRate(r) {
+    if (r === rate) return;
+    if (!audioOK) { const t = now(); rate = r; fakeStart = performance.now() - t * 1000 / r; }   // 대체 시계는 이어지게 기준점 재계산
+    else { clk = null; rate = r; try { audio.playbackRate = r; } catch (e) {} }
+    ffEl.style.display = r > 1 ? 'block' : 'none';
+  }
+  const holdEnd = () => { clearTimeout(holdTimer); holdTimer = null; setRate(1); };
+  addEventListener('pointerdown', e => {
+    if (!running || endedAt !== null || document.getElementById('gate')) return;
+    if (e.target.closest && e.target.closest('#dev, #again, .cd-hit')) return;
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => setRate(4), 2000);
+  });
+  ['pointerup', 'pointercancel', 'blur'].forEach(ev => addEventListener(ev, holdEnd));
+  document.addEventListener('visibilitychange', holdEnd);
+  audio.addEventListener('ended', holdEnd);
+
+  // ── 수정 요청용 슬라이드바 (?edit 일 때만) ──
+  //  장면 번호·이름·시간을 보여줘서 "7번 장면 고쳐줘" 식으로 말할 수 있게. 드래그하면 그 시점으로 이동.
+  const SCENE_NAMES = { basic: '등장 + 기본 춤', flipflop: '짤 댄스', wave: '파도타기', ganggang: '강강술래', hatfly: '모자 날아가기',
+    hatrelay: '모자 릴레이', conga: '기차놀이', spin: '제자리 뒤돌기', solo: '한 마리 독무', tower: '고양이 탑', pyramid: '고양이 피라미드',
+    jellyfish: '해파리 둥둥', finale: '모여서 대점프', sides: '사진 피날레' };
+  if (Q.has('edit')) {
+    const dev = document.getElementById('dev'), seek = document.getElementById('dSeek'), lab = document.getElementById('dLab');
+    const btn = document.getElementById('dPlay');
+    let dragging = false;
+    const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+    const jump = t => {                         // 그 시점으로 이동 (배포 서버는 음원 건너뛰기 OK. 안 되는 환경이면 시계만 옮김)
+      t = Math.max(0, Math.min(t, (audio.duration || 139) - .05));
+      endedAt = null; clk = null; again.style.display = 'none';
+      if (audioOK) { audio.currentTime = t; if (Math.abs(audio.currentTime - t) > .5) { audioOK = false; } }
+      if (!audioOK) fakeStart = performance.now() - t * 1000;
+    };
+    const sceneStart = k => k === 0 ? 0 : timeOfBeat(SCHEDULE[k][0]);
+    const curScene = b => { let k = 0; SCHEDULE.forEach(([st], i) => { if (b >= st) k = i; }); return k; };
+    seek.addEventListener('input', () => { dragging = true; jump(+seek.value); });
+    seek.addEventListener('change', () => { dragging = false; });
+    btn.addEventListener('click', () => {
+      if (audioOK) { if (audio.paused) { userPaused = false; audio.play(); btn.textContent = '⏸'; } else { userPaused = true; audio.pause(); btn.textContent = '▶︎'; } }
+    });
+    document.getElementById('dPrev').addEventListener('click', () => { const b = beatAt(now()); const k = curScene(b); const st = sceneStart(k); jump(now() - st > 1.5 || k === 0 ? st : sceneStart(k - 1)); });
+    document.getElementById('dNext').addEventListener('click', () => { const k = curScene(beatAt(now())); if (k + 1 < SCHEDULE.length) jump(sceneStart(k + 1)); });
+    const tickDev = () => {
+      const t = now(), b = beatAt(t), k = curScene(b), name = SCHEDULE[k][1];
+      if (!dragging) seek.value = t;
+      const bar = b < 1 ? 0 : b < 197 ? Math.floor((b - 1) / 4) + 1 : b < 202 ? 50 : Math.floor((b - 202) / 4) + 51;
+      const line = k < SCENES.length ? (LETTER_LINES[k] ? ' · 문장 있음' : ' · 문장 비어있음') : '';
+      lab.innerHTML = `장면 <b>${k + 1}/${SCHEDULE.length}</b> · ${SCENE_NAMES[name] || name} · <b>${mmss(t)}</b> · ${bar}마디${line}`;
+      requestAnimationFrame(tickDev);
+    };
+    // 시작(상품권 받기) 뒤에 나타남
+    claim.addEventListener('click', () => { dev.style.display = 'block'; requestAnimationFrame(tickDev); });
+  }
+
+  // 확인용 모드: index.html?shot=박번호 → 시작 화면 없이 그 박의 장면을 소리 없이 고정해서 그림 (스크린샷 검수용, 평소엔 안 쓰임)
+  const shot = new URLSearchParams(location.search).get('shot');
+  if (shot !== null) {
+    gate.remove(); document.getElementById('curtain').remove(); document.getElementById('bloom').remove();
+    popped = true;
+    ready.then(() => { layout(); const b = +shot; for (let x = b - 3; x < b; x += .04) __bday.setClock(x); __bday.setClock(b); document.title = 'shot-ready'; });  // 3박 전부터 잘게 돌려야 블렌드·불꽃 입자가 자연스러운 상태가 됨
+  }
+
+  // ── 화면 꺼짐 방지 + 멈춤 복구 (검수 확정) ──
+  //  2분 넘게 손을 안 대는 구성이라 폰이 어두워지거나 잠길 수 있음 → Wake Lock (iOS 16.4+/안드로이드). 탭 안에서 요청, 다시 보이면 재요청
+  let wake = null;
+  const keepAwake = () => { try { if (navigator.wakeLock && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then(w => { wake = w; }).catch(() => {}); } catch (e) {} };
+  claim.addEventListener('click', keepAwake);
+  //  전화·알림·다른 앱 때문에 음악이 멈추면 화면도 그대로 멈춤 → 돌아오면 자동 재개 시도, 안 되면 ▶ 버튼
+  const resumeShow = () => {
+    if (!running || endedAt !== null || !audioOK || userPaused) return;
+    if (actx && actx.state !== 'running') { try { actx.resume(); } catch (e) {} }
+    if (audio.paused) audio.play().then(() => { again.style.display = 'none'; }).catch(() => { again.textContent = '▶'; again.style.display = 'block'; });
+  };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { keepAwake(); resumeShow(); } });
+  audio.addEventListener('pause', () => { if (running && endedAt === null && audioOK && !userPaused && !audio.ended) setTimeout(resumeShow, 300); });
+
+  // 곡 끝: 장면은 그대로 두고(사진·문구·불꽃 계속), 오른쪽 아래 ↻ 로 처음부터 다시
+  const again = document.getElementById('again');
+  audio.addEventListener('ended', () => { endedAt = performance.now(); again.textContent = '↻'; again.style.display = 'block'; sfx('applause', .6); });
+  again.addEventListener('click', () => {
+    if (endedAt === null && audioOK && audio.paused) { again.style.display = 'none'; audio.play().catch(() => {}); return; }   // ▶ = 멈춘 곳부터 재개
+    again.style.display = 'none'; endedAt = null; clk = null;
+    audio.currentTime = 0;
+    if (!audioOK) fakeStart = performance.now();
+    else audio.play().catch(() => { audioOK = false; fakeStart = performance.now(); });
+  });
+})();
+</script>
+</body>
+</html>
