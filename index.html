@@ -101,7 +101,12 @@
   #ff { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top)); z-index: 15; transform: translateX(-50%);
     padding: 6px 12px; border-radius: 99px; background: rgba(20,20,28,.7); color: #fff; font: 700 13px/1 -apple-system, "Apple SD Gothic Neo", sans-serif;
     letter-spacing: .04em; display: none; pointer-events: none; }
+  #ff .bar { display: block; height: 3px; margin-top: 5px; border-radius: 2px; background: rgba(255,255,255,.25); overflow: hidden; }
+  #ff .bar i { display: block; height: 100%; width: 0; background: #ffd23f; }
   html, body { -webkit-touch-callout: none; }
+  /* 시작 뒤엔 스크롤·확대 제스처가 필요 없음 → touch-action none. manipulation 이면 손가락이 조금만 움직여도
+     브라우저가 스크롤로 보고 pointercancel 을 보내 꾹 누르기가 취소됐음(→ 다시 눌러야 해서 '오래 걸리는' 느낌) */
+  html.running, html.running body { touch-action: none; }
 
   #again {
     position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 14;
@@ -150,7 +155,7 @@
   </div>
 </div>
 <button id="again" aria-label="다시 보기">↻</button>
-<div id="ff">▶▶ 4배속</div>
+<div id="ff"><span class="t">▶▶ 4배속</span><span class="bar"><i></i></span></div>
 <div id="dev">
   <div class="row">
     <button id="dPlay" aria-label="재생/정지">⏸</button>
@@ -659,7 +664,7 @@
     gate.style.transition = 'opacity .15s'; gate.style.opacity = 0;
     setTimeout(() => gate.remove(), 200);
     let kicked = false;
-    const kick = () => { if (kicked) return; kicked = true; running = true; decodeSfx(); if (sfxBuf.sharalala) sfx('sharalala', .8); else sharaWanted = true; intro(now()); requestAnimationFrame(frame); };
+    const kick = () => { if (kicked) return; kicked = true; running = true; document.documentElement.classList.add('running'); decodeSfx(); if (sfxBuf.sharalala) sfx('sharalala', .8); else sharaWanted = true; intro(now()); requestAnimationFrame(frame); };
     if (!pr) { audio.currentTime = 0; pr = audio.play(); }
     if (pr && pr.then) {
       pr.then(() => kick()).catch(() => { audioOK = false; fakeStart = performance.now(); kick(); });
@@ -706,24 +711,33 @@
   // ── 꾹 누르기 빨리감기 (유저 요청) ──
   //  손가락/마우스를 2초 누르고 있으면 4배속, 떼는 순간 1배속. 음악 playbackRate 를 바꾸면 박 시계가 음악을 따르므로 춤·편지·피날레가 전부 같이 빨라짐.
   //  4배는 브라우저가 소리를 내주는 상한(크롬은 4 초과면 음소거)이라 딱 4.
-  const ffEl = document.getElementById('ff');
-  let holdTimer = null;
+  const ffEl = document.getElementById('ff'), ffTxt = ffEl.querySelector('.t'), ffBar = ffEl.querySelector('.bar'), ffFill = ffEl.querySelector('.bar i');
+  const HOLD_MS = 2000;
+  let holdStart = null, holdTimer = null;   // 전환은 타이머로 정확히 2초(화면 갱신이 느려져도 안 밀림), 막대는 매 프레임
   function setRate(r) {
     if (r === rate) return;
     if (!audioOK) { const t = now(); rate = r; fakeStart = performance.now() - t * 1000 / r; }   // 대체 시계는 이어지게 기준점 재계산
     else { clk = null; rate = r; try { audio.playbackRate = r; } catch (e) {} }
-    ffEl.style.display = r > 1 ? 'block' : 'none';
   }
-  const holdEnd = () => { clearTimeout(holdTimer); holdTimer = null; setRate(1); };
+  function holdTick() {
+    if (holdStart === null) return;
+    const el = performance.now() - holdStart;
+    if (rate > 1) return;
+    if (el > 250) {   // 0.25초 넘게 누르면 '▶▶' 가 차오르는 게 보임 → 2초 되는 순간 4배속
+      ffTxt.textContent = '▶▶'; ffBar.style.display = 'block'; ffFill.style.width = (el / HOLD_MS * 100) + '%'; ffEl.style.display = 'block';
+    }
+  }
+  function goFast() { if (holdStart === null) return; setRate(4); ffTxt.textContent = '▶▶ 4배속'; ffBar.style.display = 'none'; ffEl.style.display = 'block'; }
+  const holdEnd = () => { holdStart = null; clearTimeout(holdTimer); setRate(1); ffEl.style.display = 'none'; };
   addEventListener('pointerdown', e => {
     if (!running || endedAt !== null || document.getElementById('gate')) return;
     if (e.target.closest && e.target.closest('#dev, #again, .cd-hit')) return;
-    clearTimeout(holdTimer);
-    holdTimer = setTimeout(() => setRate(4), 2000);
+    holdStart = performance.now(); clearTimeout(holdTimer); holdTimer = setTimeout(goFast, HOLD_MS);
   });
   ['pointerup', 'pointercancel', 'blur'].forEach(ev => addEventListener(ev, holdEnd));
   document.addEventListener('visibilitychange', holdEnd);
   audio.addEventListener('ended', holdEnd);
+  (function holdLoop() { holdTick(); requestAnimationFrame(holdLoop); })();
 
   // ── 수정 요청용 슬라이드바 (?edit 일 때만) ──
   //  장면 번호·이름·시간을 보여줘서 "7번 장면 고쳐줘" 식으로 말할 수 있게. 드래그하면 그 시점으로 이동.

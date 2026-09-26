@@ -506,6 +506,11 @@
   }
 
   /* ── 사진: 빙그르르 등장 → 박마다 콩콩, 살랑살랑 ── */
+  function setWill(v) {
+    S.photo.style.willChange = v;
+    if (S.sweep) S.sweep.style.willChange = v;
+    if (S.stk) for (var k = 0; k < S.stk.length; k++) S.stk[k].style.willChange = v;
+  }
   function updPhoto(b) {
     var st = S.st, tf, op = 1, i;
     if (b < st) {
@@ -516,7 +521,7 @@
       op = clamp(p * 6, 0, 1);
       tf = 'rotate(' + n2(rot) + 'deg) scale(' + n4(sc) + ')';
       S.pose = { dy: 0, rot: rot, sx: sc, sy: sc, bdy: 0, brot: rot, bs: sc };
-      if (S.willOn) { S.photo.style.willChange = ''; S.willOn = false; }
+      if (S.willOn) { setWill(''); S.willOn = false; }
       for (i = 0; i < S.glints.length; i++) setOp(S.glints[i], 0);
       setOp(S.sweep, 0);
       for (i = 0; i < S.stk.length; i++) setTf(S.stk[i], 'rotate(' + S.stk[i]._r + 'deg)');
@@ -537,7 +542,7 @@
       tf = 'translate(0,' + n2(dy0 + dyq) + 'px) rotate(' + n2(ang) + 'deg) scale(' + n4(s2 * sxq) + ',' + n4(s2 * syq) + ')';
       S.pose = { dy: dy0 + dyq, rot: ang, sx: s2 * sxq, sy: s2 * syq, bdy: dy0, brot: r2, bs: s2 };
       // 착지 후엔 크기가 거의 1로 고정 → 이때 레이어로 올려야 크롬이 흐리게 굳히지 않음(작을 때 올리면 흐림)
-      if (!S.willOn) { S.photo.style.willChange = 'transform'; S.willOn = true; }
+      if (!S.willOn) { setWill('transform'); S.willOn = true; }   // 착지 순간 사진+빛줄기+스티커를 같이 자기 층으로 (검수 확정: 따로 두면 매 프레임 사진 전체를 다시 그려 폰 GPU 2.6배)
 
       // 액자 반짝 빛점: 2박 주기로 하나씩 차례로 반짝. 탭하면 네 개가 0.07초 간격으로 한꺼번에 반짝(탭 반짝임)
       var tt = S.wt - S.tapT;
@@ -1178,7 +1183,7 @@
     clearTap(true);
     S.pose = null;
     S.landed = false;
-    if (S.willOn) { S.photo.style.willChange = ''; S.willOn = false; }
+    if (S.willOn) { setWill(''); S.willOn = false; }
     if (S.ctx && S.cv.width) { S.ctx.setTransform(1, 0, 0, 1, 0, 0); S.ctx.clearRect(0, 0, S.cv.width, S.cv.height); }
   }
 
