@@ -278,6 +278,9 @@
 
   /* ── 초기화: 요소 만들고 전부 숨겨둠 ── */
   function init(back, front) {
+    // 통일 버전(plain.html)은 letters-plain.js 가 window.FINALE_TEXT 를 넣어 둠 → 여기서 반영 (진짜 버전은 기본 문구 그대로).
+    //  init 은 모든 스크립트가 로드된 뒤 엔진이 부르므로, finale.js 보다 늦게 로드되는 letters-plain.js 값도 여기선 보임
+    if (window.FINALE_TEXT) { TEXT = window.FINALE_TEXT; CUT = TEXT.indexOf(' '); LINES_1 = [TEXT]; LINES_2 = [TEXT.slice(0, CUT), TEXT.slice(CUT + 1)]; }
     if (S.ready || !back || !front) return;
     var style = document.createElement('style');
     style.textContent = CSS;

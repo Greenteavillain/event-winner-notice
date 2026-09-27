@@ -7,6 +7,10 @@
 //    4장면 첫 박에 '!' 가 퐁 붙어 '축하해!!' 가 됨 (letters.js odoParts 의 '꼬리만 붙음' 경로).
 //  · 줄바꿈(\n)만 넣고 글자는 그대로 — 맨 아래 검사가 확인함.
 (function () {
+  // 사진 피날레 문구도 통일 버전에선 이걸로 (유저 요청 2026-09-27). finale.js 가 init 때 읽음
+  window.FINALE_TEXT = '주원아!! 생일 축하해!!';
+  // 촛불 끈 뒤 문구도 통일 버전에선 이걸로 (유저 요청 2026-09-27, 쓴 그대로). candle.js 가 init 때 읽음
+  window.CANDLE_TEXT = '평생 가자 사랑하는 주원아!!';
   var T = '전주원 생일 축하해!!';
   window.LETTER_LINES = [
     T,                                                                                   //  1 등장 + 기본 춤

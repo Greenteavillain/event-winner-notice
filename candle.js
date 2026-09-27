@@ -270,6 +270,12 @@
 
   /* ── 초기화 ── */
   function init(container, opts) {
+    // 통일 버전(plain.html)은 letters-plain.js 가 window.CANDLE_TEXT 를 넣어 둠 → 여기서 반영 (진짜 버전은 기본 문구 그대로).
+    //  두 줄로 나눌 땐 두 번째 띄어쓰기 뒤에서 끊음 → "평생 가자 " / "사랑하는 주원아!!" (원래 문구도 같은 자리)
+    if (window.CANDLE_TEXT) {
+      MSG = window.CANDLE_TEXT; var sp2 = MSG.indexOf(' ', MSG.indexOf(' ') + 1);
+      BRK = sp2 > 0 ? sp2 + 1 : MSG.length; LINES_1 = [MSG]; LINES_2 = [MSG.slice(0, BRK), MSG.slice(BRK)];
+    }
     if (S.ready || !container) return;
     try {
       S.opts = opts || {};
