@@ -111,6 +111,8 @@ window.Letters = (() => {
   function odoParts(a, b) {
     let p = 0;
     while (p < a.length && a[p] === b[p]) p++;
+    // 뒤 문장이 앞 문장 + 꼬리뿐('축하해!'→'축하해!!', plain.html): 굴릴 글자 없이 꼬리만 퐁 (2026-09-27 통일 버전용)
+    if (p >= a.length && b.length > a.length) return { pre: a, d0: '', d1: '', mid: '', extra: b.slice(a.length) };
     const mid = a.slice(p + 1);
     if (p >= a.length || !b.slice(p + 1).startsWith(mid)) return null;
     return { pre: a.slice(0, p), d0: a[p], d1: b[p], mid, extra: b.slice(p + 1 + mid.length) };
@@ -165,6 +167,14 @@ window.Letters = (() => {
   function buildOdo(pair) {
     const L = window.LETTER_LINES, P = odoParts(textOf(L[pair[0]]), textOf(L[pair[1]]));
     if (!P) return;
+    if (!P.d0) {                                           // 꼬리만 붙는 경우: 굴림판 없이 '!' 만 숨겨 붙여 둠
+      const lastC = chars[chars.length - 1], ex0 = document.createElement('span');
+      ex0.textContent = P.extra;
+      ex0.style.cssText = `display:inline-block;color:${RAINBOW[(chars.length + 1) % RAINBOW.length]};text-shadow:${OUTLINE};transform:scale(0);`;
+      lastC.s.parentNode.appendChild(ex0);
+      odo = { strip: null, one: null, digit: null, ex: ex0, exW: 0 };
+      return;
+    }
     const rc = chars[[...P.pre].length];                   // 바뀌는 자리의 글자('0')
     const roller = document.createElement('span');
     // 창: 위아래를 잘라서 굴러가는 숫자가 창 밖에선 안 보이게. 옆·아래로는 흰 테두리·보라 그림자 몫만큼 여유
@@ -364,7 +374,7 @@ window.Letters = (() => {
       if (beat >= B - 1.1 && beat < B - .8) p = .12 * Math.sin(Math.PI * (beat - (B - 1.1)) / .3);
       else if (beat >= B - .45 && beat < B) p = Math.pow((beat - (B - .45)) / .45, 2.2);
       else if (beat >= B) { const t = Math.min(1, (beat - B) / .6); p = 1 + .13 * Math.sin(Math.PI * t) * (1 - t); }
-      odo.strip.style.transform = `translateY(${(-p * ROLL).toFixed(3)}em)`;
+      if (odo.strip) odo.strip.style.transform = `translateY(${(-p * ROLL).toFixed(3)}em)`;
       const pop = beat >= B ? backOut(clamp((beat - B) / .45)) : 0;
       odo.ex.style.transform = `scale(${pop.toFixed(3)}) rotate(${((1 - clamp(pop)) * -70).toFixed(1)}deg)`;
       tx += odo.exW / 2 * (1 - clamp(pop));                 // '!' 자리를 비워 둔 만큼 오른쪽으로 → 보이는 글자가 가운데
@@ -485,7 +495,7 @@ window.Letters = (() => {
       }
       r.s.style.transform = `translateY(${(wave + dy).toFixed(3)}em) scale(${cs})`;
     }
-    if (odo) odo.one.style.transform = odo.digit.s.style.transform;   // 굴러 올라오는 '1'도 '0'과 같이 물결
+    if (odo && odo.one) odo.one.style.transform = odo.digit.s.style.transform;   // 굴러 올라오는 '1'도 '0'과 같이 물결
   }
 
   // ── 8마리나: 엔진이 동물들을 이 점으로 돌려세워 손으로 가리키게 함 ──
