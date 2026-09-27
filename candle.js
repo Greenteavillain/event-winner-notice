@@ -318,7 +318,7 @@
         try { e.stopPropagation(); } catch (x) {}
         if (S.state !== 'out' || S.dismissT >= 0 || !S.textOn) return;
         if (S.T - S.outT < TEXT0 + (S.textEnd || 0) + DISMISS_WAIT) return;
-        S.dismissT = S.T;
+        startRelight();
       });
       var msg = S.msg = el('div', 'cd-msg', R);
       msg.setAttribute('aria-live', 'polite');
@@ -455,7 +455,10 @@
   }
 
   /* ── 상태 ── */
-  var DISMISS_WAIT = 2, DISMISS_DUR = 1;   // 닫기: 문구 다 나온 뒤 2초부터 가능, 1초에 걸쳐 사라짐
+  var DISMISS_WAIT = 2, DISMISS_DUR = 1;   // 톡 눌러 다시 켜기: 문구 다 나온 뒤 2초부터 가능, 1초에 걸쳐 밝아짐
+  // 유저 제안(2026-09-27): 끈 뒤 저절로 다시 켜져서 또 불어볼 수 있게. 끈 순간부터 5초면 문구(약 3~4초 걸려 뜸)를 읽자마자 밝아져서
+  //  '문구가 다 나온 뒤' 5초로 잡음(끈 뒤 약 9초)
+  var RELIGHT_WAIT = 5, RELIGHT_GROW = 0.7;
   function setState(st) { S.state = st; S.stateT = S.T; updateHint(); }
   function updateHint() {
     var st = S.state, t = '';
@@ -690,6 +693,23 @@
     S.sps.style.display = 'block';
     S.dismissT = -1;
   }
+  function startRelight() {
+    if (S.state !== 'out' || S.dismissT >= 0) return;
+    S.dismissT = S.T;                 // 막·문구·반짝이 걷힘 시작(step 에서 진행)
+    S.relitT = S.T;                   // 불꽃이 작게서 커지며 다시 켜짐(drawCandles)
+    S.hit.classList.remove('off');
+    S.flamesGone = false; S.smokeDone = true;
+    S.fl.forEach(function (f) {
+      f.fl.style.display = ''; f.halo.style.display = '';
+      setAt(f.em, 'opacity', '0');
+      f.pf.forEach(function (c) { setAt(c, 'opacity', '0'); });
+      f.sm.forEach(function (p) { setAt(p, 'opacity', '0'); });
+    });
+    if (S.glow) S.glow.style.display = '';
+    S.tapT = -1e9; S.lean = 0;
+    setState('idle');                 // 다시 누르면 또 끌 수 있음 (폰은 마이크 다시 요청)
+    sfx('pop', 0.5);
+  }
   function resetOut() {          // 끄기 연출을 전부 처음 상태로
     S.outT = -1; S.textOn = false; S.spOn = false; S.outDone = false; S.flamesGone = false; S.smokeDone = false;
     S.hit.classList.remove('off');
@@ -723,6 +743,7 @@
     var t = S.T, out = S.state === 'out', tt = out ? t - S.outT : 0, lean = S.lean;
     if (out) lean = Math.min(1.3, Math.max(S.leanAtOut || 0, clamp01(tt / GUST)) * 1.3);   // 훅: 짧게 확 눕고
     var fade = out ? 1 - clamp01((tt - GUST) / OUTF) : 1;                                   // → 줄어들며 사라짐
+    if (!out && S.relitT >= 0) { var g = clamp01((t - S.relitT) / RELIGHT_GROW); fade *= easeOut3(g); if (g >= 1) S.relitT = -1; }   // 다시 켜질 때: 퐁 하고 커짐
     var navg = 0;
     for (var i = 0; i < 3; i++) {
       var f = S.fl[i];
@@ -778,7 +799,7 @@
       }
     }
     // 화면 어두워짐
-    if (S.dismissT === -1) setOp(S.dark, easeInOut(clamp01((tt - DARK0) / DARKD)));   // 닫는 중(≥0)·닫힘(-2)이면 건드리지 않음
+    if (S.dismissT === -1) setOp(S.dark, easeInOut(clamp01((tt - DARK0) / DARKD)));   // 다시 켜는 중(≥0)이면 건드리지 않음
     // 문구: 한 글자씩 아래에서 스르르 (흐림→또렷, 살짝 작게→제 크기)
     var tx = tt - TEXT0;
     if (tx >= 0 && !S.textOn) {
@@ -846,11 +867,9 @@
     if (S.dismissT >= 0) {
       var dk = clamp01((S.T - S.dismissT) / DISMISS_DUR), keep = 1 - easeInOut(dk);
       setOp(S.dark, keep); S.msg.style.opacity = keep; S.sps.style.opacity = keep;
-      if (dk >= 1) {
-        S.dark.style.display = 'none'; S.dark.style.pointerEvents = ''; S.msg.style.display = 'none'; S.sps.style.display = 'none';
-        S.dismissT = -2;   // 닫힘 완료(다시 안 열림, 되감기하면 reset)
-      }
+      if (dk >= 1) resetOut();   // 막·문구·반짝이 숨기고 글자 초기화 (불꽃은 이미 켜져 있음, 상태는 idle)
     }
+    if (S.state === 'out' && S.dismissT === -1 && S.textOn && S.T - S.outT >= TEXT0 + (S.textEnd || 0) + RELIGHT_WAIT) startRelight();
   }
 
   window.Candle = {
