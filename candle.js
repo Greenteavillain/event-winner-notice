@@ -312,6 +312,14 @@
       var hint = S.hint = el('div', 'cd-hint', R);
       S.hintB = el('span', 'cd-hb', hint);
       S.dark = el('div', 'cd-dark', R);
+      // 유저 요청: 촛불 끈 뒤 어두운 화면을 톡 누르면 막+문구+반짝이가 같이 스르르 사라지고 밝은 피날레로 돌아감.
+      //  문구를 다 읽기 전에 실수로 닫히지 않게, 문구가 다 나오고 DISMISS_WAIT 초 뒤부터만 반응
+      S.dark.addEventListener('click', function (e) {
+        try { e.stopPropagation(); } catch (x) {}
+        if (S.state !== 'out' || S.dismissT >= 0 || !S.textOn) return;
+        if (S.T - S.outT < TEXT0 + (S.textEnd || 0) + DISMISS_WAIT) return;
+        S.dismissT = S.T;
+      });
       var msg = S.msg = el('div', 'cd-msg', R);
       msg.setAttribute('aria-live', 'polite');
       S.halo = el('div', 'cd-halo', msg);
@@ -447,6 +455,7 @@
   }
 
   /* ── 상태 ── */
+  var DISMISS_WAIT = 2, DISMISS_DUR = 1;   // 닫기: 문구 다 나온 뒤 2초부터 가능, 1초에 걸쳐 사라짐
   function setState(st) { S.state = st; S.stateT = S.T; updateHint(); }
   function updateHint() {
     var st = S.state, t = '';
@@ -676,15 +685,17 @@
     S.outT = S.T;
     S.hit.classList.add('off');
     S.hint.classList.remove('on'); S.hint._on = false;
-    S.dark.style.display = 'block';
+    S.dark.style.display = 'block'; S.dark.style.pointerEvents = 'auto'; S.dark.style.cursor = 'pointer';
     S.msg.style.display = 'block';
     S.sps.style.display = 'block';
+    S.dismissT = -1;
   }
   function resetOut() {          // 끄기 연출을 전부 처음 상태로
     S.outT = -1; S.textOn = false; S.spOn = false; S.outDone = false; S.flamesGone = false; S.smokeDone = false;
     S.hit.classList.remove('off');
     S.hint.classList.remove('on'); S.hint._on = false;
-    S.dark.style.display = 'none'; setOp(S.dark, 0);
+    S.dark.style.display = 'none'; setOp(S.dark, 0); S.dark.style.pointerEvents = ''; S.dismissT = -1;
+    S.msg.style.opacity = ''; S.sps.style.opacity = '';
     S.msg.style.display = 'none'; S.msg.classList.remove('on');
     S.sps.style.display = 'none'; S.sps.classList.remove('on');
     (S.letters || []).forEach(function (L) { setOp(L.e, 0); setTf(L.e, ''); L.e.style.filter = ''; L._b = -1; });
@@ -767,7 +778,7 @@
       }
     }
     // 화면 어두워짐
-    setOp(S.dark, easeInOut(clamp01((tt - DARK0) / DARKD)));
+    if (S.dismissT === -1) setOp(S.dark, easeInOut(clamp01((tt - DARK0) / DARKD)));   // 닫는 중(≥0)·닫힘(-2)이면 건드리지 않음
     // 문구: 한 글자씩 아래에서 스르르 (흐림→또렷, 살짝 작게→제 크기)
     var tx = tt - TEXT0;
     if (tx >= 0 && !S.textOn) {
@@ -832,6 +843,14 @@
     else if (S.state !== 'out') S.lean += (0 - S.lean) * Math.min(1, dt * 6);
     drawCandles();
     if (S.state === 'out') drawOut();
+    if (S.dismissT >= 0) {
+      var dk = clamp01((S.T - S.dismissT) / DISMISS_DUR), keep = 1 - easeInOut(dk);
+      setOp(S.dark, keep); S.msg.style.opacity = keep; S.sps.style.opacity = keep;
+      if (dk >= 1) {
+        S.dark.style.display = 'none'; S.dark.style.pointerEvents = ''; S.msg.style.display = 'none'; S.sps.style.display = 'none';
+        S.dismissT = -2;   // 닫힘 완료(다시 안 열림, 되감기하면 reset)
+      }
+    }
   }
 
   window.Candle = {

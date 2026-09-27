@@ -690,7 +690,7 @@
   //  사진 위 탭은 finale.js 가 먼저 가져가고(한 바퀴 + 하트 불꽃), 아니면 손가락 아래 동물 중 맨 앞 것의 모자가 날아감
   addEventListener('pointerdown', e => {
     if (!started || document.getElementById('gate')) return;
-    if (e.target.closest && e.target.closest('#dev, #again, .cd-hit')) return;
+    if (e.target.closest && e.target.closest('#dev, #again, .cd-hit, .cd-dark')) return;
     const x = e.clientX, y = e.clientY;
     if (window.Finale && typeof Finale.tap === 'function') { try { if (Finale.tap(x, y)) { sfx('spin', .5); sfx('firework_bang', .6); return; } } catch (err) {} }   // 사진 탭: 한 바퀴 + 하트 불꽃 (소리는 엔진이 냄)
     let best = -1, bestZ = -1;
@@ -731,7 +731,7 @@
   const holdEnd = () => { holdStart = null; clearTimeout(holdTimer); setRate(1); ffEl.style.display = 'none'; };
   addEventListener('pointerdown', e => {
     if (!running || endedAt !== null || document.getElementById('gate')) return;
-    if (e.target.closest && e.target.closest('#dev, #again, .cd-hit')) return;
+    if (e.target.closest && e.target.closest('#dev, #again, .cd-hit, .cd-dark')) return;
     holdStart = performance.now(); clearTimeout(holdTimer); holdTimer = setTimeout(goFast, HOLD_MS);
   });
   ['pointerup', 'pointercancel', 'blur'].forEach(ev => addEventListener(ev, holdEnd));
